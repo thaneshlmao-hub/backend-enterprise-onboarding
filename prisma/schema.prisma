@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ──────────────────────────────────────────
+// These match what Day 5 requires exactly
+
+enum ItemStatus {
+  IN_STOCK
+  LOW_STOCK
+  OUT_OF_STOCK
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+// ── Company ────────────────────────────────────────
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  items     Item[]
+  auditLogs AuditLog[]
+}
+
+// ── User ───────────────────────────────────────────
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  companyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company  @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+}
+
+// ── Item ───────────────────────────────────────────
+model Item {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  status      ItemStatus @default(IN_STOCK)
+  companyId   String
+  deletedAt   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  company     Company    @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([companyId, status])
+  @@index([companyId, deletedAt])
+}
+
+// ── AuditLog ───────────────────────────────────────
+model AuditLog {
+  id         String      @id @default(uuid())
+  companyId  String
+  userId     String
+  entityType String
+  entityId   String
+  action     AuditAction
+  before     Json?
+  after      Json?
+  createdAt  DateTime    @default(now())
+
+  company    Company     @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@index([entityType, entityId])
+}
